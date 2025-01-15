@@ -1,42 +1,137 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+/* public */
+:root {
+  --hex-primary: #2bbd7e;
+  --hex-secondary: #18915c;
+  --hex-tertiary: #0e6841;
+  --hex-text-primary: #f8f9fa;
+  --hex-bg-primary: #212529;
+  --hex-bg-secondary: #333;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+::-webkit-scrollbar {
+  width: 5px;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+::-webkit-scrollbar-track {
+  background: var(--hex-bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--hex-primary);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--hex-secondary);
+}
+
+body {
+  line-height: 1;
+  background-color: var(--hex-bg-secondary);
+}
+
+/* custom */
+.aside-product-li {
+  user-select: none;
+  font-weight: bolder;
+  font-size: 1.2rem;
+  padding: 2rem 0 2rem 1rem;
+  border: 0;
+  border-bottom: 1px solid #2bbd7e;
+  border-radius: 0 !important;
+}
+
+.aside-product-li:hover {
+  background-color: var(--hex-bg-secondary) !important;
+}
+
+.login-form {
+  display: grid;
+  grid-template-columns: 260px calc(80px + .8rem);
+  grid-template-rows: repeat(3, 40px);
+  gap: .8rem;
+}
+
+.checking-login,
+.login-form button[type="submit"] {
+  grid-row: span 2;
+}
+
+.btn-checking-login:hover,
+.btn-checking-login {
+  pointer-events: none;
+  background-color: var(--hex-text-primary);
+  border: 1px solid var(--hex-text-primary);
+  background-image: linear-gradient(transparent calc(50% - 4px), #f00 50%, transparent calc(50% + 4px));
+  color: transparent;
+  background-clip: text;
+  position: relative;
+  background-size: 100% 200%;
+  animation: scan 1.5s linear infinite;
+  font-weight: bolder;
+  font-size: 1.25rem;
+}
+
+.save-local {
+  position: relative;
+}
+
+.save-local-info:hover,
+.save-local:hover > .save-local-info {
+  width: 15px;
+  transition: width .2s ease-in;
+  cursor: help;
+  visibility: visible;
+}
+
+.save-local-info {
+  visibility: hidden;
+  border-radius: 0 5px 5px 0;
+  position: absolute;
+  top: 5px;
+  padding: 0;
+  left: 100%;
+  width: 0px;
+  height: 20px;
+  border: none;
+  overflow: hidden;
+  background-color: #ccc;
+}
+
+@keyframes scan {
+
+  0%,
+  100% {
+    background-position: 0% 90%;
   }
-  to {
-    transform: rotate(360deg);
+
+  50% {
+    background-position: 0% 10%;
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+/* replace bootstrap */
+.bg-secondary {
+  background-color: var(--hex-bg-secondary) !important;
 }
 
-.card {
-  padding: 2em;
+.form-floating>.form-control {
+  height: 40px;
+  min-height: 40px;
+  font-size: .8rem;
 }
 
-.read-the-docs {
-  color: #888;
+.form-floating>label {
+  padding: calc((40px - .8rem) / 2);
+  font-size: .8rem;
+  border: none;
+}
+
+.form-floating>input+label:after {
+  background: transparent !important;
+}
+
+.form-control:focus {
+  border-color: var(--hex-primary);
+  box-shadow: inset 0 1px 1px #0007, 0 0 8px #2bbd7e3c;
 }
