@@ -69,6 +69,22 @@ body {
   background-color: var(--hex-bg-secondary) !important;
 }
 
+.aside-product-li.selected {
+  position: relative;
+  background: linear-gradient(transparent, var(--hex-bg-secondary), transparent);
+}
+
+.aside-product-li.selected::after {
+  content: '';
+  width: 1.25rem;
+  height: 1.25rem;
+  mask: no-repeat center;
+  mask-image: url("./assets/eye.svg");
+  background-color: var(--hex-primary);
+  position: absolute;
+  right: 1rem;
+}
+
 .login-form {
   display: grid;
   grid-template-columns: 230px calc(80px + .8rem);
@@ -159,6 +175,7 @@ body {
   line-height: 1rem;
   border: none;
   padding: 0 .25rem;
+  white-space: nowrap;
 }
 
 .control-mode-switch-quote {

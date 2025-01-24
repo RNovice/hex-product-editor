@@ -25,6 +25,28 @@ const filedNotFound = <span className="text-danger">找不到資料</span>;
 /*
 https://hexschool.github.io/ec-courses-api-swaggerDoc/
 */
+
+const emptyProductData = () => ({
+  category: "",
+  content: "",
+  description: "",
+  imageUrl: "",
+  imagesUrl: [],
+  is_enabled: 1,
+  origin_price: 0,
+  price: 0,
+  title: "",
+  unit: "",
+});
+
+const newProductsJson = JSON.stringify([emptyProductData()], null, "\t");
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const isObject = (variable) =>
+  typeof variable === "object" && variable !== null && !Array.isArray(variable);
+const isObjectArray = (variable) =>
+  Array.isArray(variable) && variable.every((item) => isObject(item));
+
 const App = () => {
   const [isCheckingLogin, setIsCheckingLogin] = useState(false);
   const [isLogin, setIsLogin] = useState(false);
@@ -34,7 +56,9 @@ const App = () => {
     password: "",
   });
   const [API_Path, setAPI_Path] = useState("");
-  const [products, setProducts] = useState([]);
+  const [existProducts, setExistProducts] = useState([]);
+  const [newProducts, setNewProducts] = useState([emptyProductData()]);
+  const [selected, setSelected] = useState(null);
   const [viewEditProduct, setViewEditProduct] = useState({});
   const [json, setJson] = useState(null);
   const [editMode, setEditMode] = useState(true);
@@ -43,6 +67,7 @@ const App = () => {
   const [operationLog, setOperationLog] = useState([]);
   const [logKey, setLogKey] = useState(0);
   const logRef = useRef();
+  const editorRef = useRef(null);
 
   useEffect(() => {
     async function checkLogin() {
@@ -101,6 +126,19 @@ const App = () => {
   useEffect(() => {
     if (isLogin) getProducts();
   }, [isLogin]);
+
+  useEffect(() => {
+    setFormattedJson(editMode ? existProducts : newProducts);
+    setViewEditProduct({});
+    setSelected(null);
+  }, [editMode]);
+
+  useEffect(() => {
+    if (editMode) {
+    } else {
+      setNewProducts(JSON.parse(json));
+    }
+  }, [json]);
 
   useEffect(() => setLogKey(logKey + 1), [operationLog]);
 
@@ -181,12 +219,83 @@ const App = () => {
   }
 
   function handleEditorChange(newValue) {
+    if (editMode) {
+    } else {
+      setNewProducts(JSON.parse(newValue));
+    }
     setJson(newValue);
   }
+
+  const handleEditorDidMount = (editor) => {
+    editorRef.current = editor;
+  };
 
   function handleFullscreen(e, target) {
     e.target.focus();
     setFullWho(target === fullWho ? null : target);
+  }
+
+  async function handleAddNewProduct() {
+    let refresh = false;
+    const failArr = [];
+    if (!checkSyntaxRight()) return;
+    const productList = JSON.parse(json);
+    if (!isObjectArray(productList))
+      return logOperation({
+        msg: "新增模式中 json 必須是物件陣列 | 請檢查",
+        type: "log-warning",
+      });
+    for (const product of productList) {
+      try {
+        await axios.post(`${API_BASE}/api/${API_Path}/admin/product/`, {
+          data: product,
+        });
+        await sleep(250);
+        logOperation({ msg: `${product.title} 新增成功`, type: "log-success" });
+        refresh = true;
+      } catch (err) {
+        const axiosError = err.response?.data.message;
+        const msg = `${product.title || "未命名產品"} 新增失敗 | ${
+          axiosError?.join(", ") || err
+        }`;
+        logOperation({ msg, type: "log-err" });
+        failArr.push(product);
+      }
+    }
+    setViewEditProduct({});
+    if (refresh) getProducts();
+    if (failArr.length) {
+      setFormattedJson(failArr);
+    } else {
+      logOperation({ msg: "切換為編輯模式" });
+      setEditMode(true);
+    }
+  }
+
+  async function handlePasteProduct() {
+    const source = await navigator.clipboard.readText();
+    try {
+      const data = JSON.parse(source);
+      if (isObject(data)) {
+        setFormattedJson([...newProducts, data]);
+        logOperation({ msg: `已貼上 1筆資料` });
+        moveToLineOrBottom();
+      } else if (isObjectArray(data)) {
+        setFormattedJson([...newProducts, ...data]);
+        logOperation({ msg: `已貼上 ${data.length}筆資料` });
+        moveToLineOrBottom();
+      } else {
+        logOperation({
+          msg: "貼上格式不正確 | 僅接受單筆物件或物件陣列",
+          type: "log-warning",
+        });
+      }
+    } catch {
+      logOperation({
+        msg: "貼上格式不正確 | 僅接受單筆物件或物件陣列",
+        type: "log-warning",
+      });
+    }
   }
 
   async function getProducts() {
@@ -195,8 +304,8 @@ const App = () => {
         `${API_BASE}/api/${API_Path}/admin/products/all`
       );
       const allProducts = Object.values(res.data.products);
-      setProducts(allProducts);
-      setJson(JSON.stringify(allProducts, null, "\t"));
+      setExistProducts(allProducts);
+      if (editMode) setFormattedJson(allProducts);
       logOperation({ msg: `成功撈取資料: ${allProducts.length}筆產品` });
     } catch (err) {
       console.error(err);
@@ -216,6 +325,29 @@ const App = () => {
     ]);
   }
 
+  function setFormattedJson(value) {
+    setJson(JSON.stringify(value, null, "\t"));
+  }
+
+  function moveToLineOrBottom(num = null) {
+    if (editorRef.current) {
+      const editor = editorRef.current;
+      const model = editor.getModel();
+
+      editor.revealLineInCenter(num === null ? model.getLineCount() : num);
+    }
+  }
+
+  function checkSyntaxRight() {
+    const model = editorRef.current.getModel();
+    const markers = monaco.editor.getModelMarkers({ resource: model.uri });
+    if (markers.length) {
+      logOperation({ msg: "編輯器中 json 語法錯誤", type: "log-warning" });
+      return false;
+    }
+    return true;
+  }
+
   return (
     <div className="container-fluid text-light" style={{ height: "100vh" }}>
       <div className="row p-3 h-100 gap-1">
@@ -225,17 +357,18 @@ const App = () => {
         >
           <div className="flex-grow-1 overflow-auto pe-3">
             <ul className="list-group">
-              {products.map((product, i) => (
+              {(editMode ? existProducts : newProducts).map((product, i) => (
                 <li
                   key={`aside-product-li-${i}`}
-                  className="list-group-item bg-dark text-light aside-product-li d-flex"
-                  onClick={() => setViewEditProduct(product)}
+                  className={`list-group-item bg-dark text-light aside-product-li d-flex ${
+                    selected === `aside-product-li-${i}` ? " selected" : ""
+                  }`}
+                  onClick={() => {
+                    setViewEditProduct(product);
+                    setSelected(`aside-product-li-${i}`);
+                  }}
                 >
-                  <span>{product?.title || "找不到產品名稱"}</span>
-                  <button className="ms-auto me-2 aside-delete-btn">
-                    
-                  </button>
-                  
+                  {product?.title || "找不到產品名稱"}
                 </li>
               ))}
             </ul>
@@ -349,6 +482,7 @@ const App = () => {
                 defaultLanguage="json"
                 value={json}
                 onChange={handleEditorChange}
+                onMount={handleEditorDidMount}
                 options={{
                   folding: true,
                   foldingHighlight: true,
@@ -398,7 +532,7 @@ const App = () => {
                         </ruby>
                       )}
                     </div>
-                    <div className="">
+                    <div className="text-center">
                       <button title="保存變更此產品">
                         <i
                           style={{ maskImage: `url("${saveSvg}")` }}
@@ -422,32 +556,47 @@ const App = () => {
                   </div>
                 ) : (
                   <div className="mx-auto d-flex flex-wrap justify-content-center align-items-center add-new-tools control-tools">
-                    <button title="加新產品">
+                    <button
+                      title="加新產品"
+                      onClick={() => {
+                        setJson((pre) =>
+                          JSON.stringify(
+                            [...JSON.parse(pre), emptyProductData()],
+                            null,
+                            "\t"
+                          )
+                        );
+                        moveToLineOrBottom();
+                      }}
+                    >
                       <i
                         style={{ maskImage: `url("${plusSvg}")` }}
                         className="icon bg-warning"
                         onClick={() => {}}
                       />
                     </button>
-                    <button className="text-warning" title="貼上產品">
+                    <button title="貼上產品" onClick={handlePasteProduct}>
                       <i
                         style={{ maskImage: `url("${pasteSvg}")` }}
                         className="icon bg-warning"
-                        onClick={() => {}}
                       />
                     </button>
-                    <button className="text-danger" title="重新開始">
+                    <button
+                      title="重新開始"
+                      onClick={() => {
+                        setJson(newProductsJson);
+                        moveToLineOrBottom(1);
+                      }}
+                    >
                       <i
                         style={{ maskImage: `url("${reloadSvg}")` }}
                         className="icon bg-danger"
-                        onClick={() => {}}
                       />
                     </button>
-                    <button className="text-success" title="上傳保存">
+                    <button title="上傳保存" onClick={handleAddNewProduct}>
                       <i
                         style={{ maskImage: `url("${saveSvg}")` }}
                         className="icon bg-success"
-                        onClick={() => {}}
                       />
                     </button>
                   </div>
