@@ -702,6 +702,30 @@ const App = () => {
                       <br />
                       {viewEditProduct.content ?? filedNotFound}
                     </p>
+                    {Object.keys(viewEditProduct)
+                      .filter(
+                        (field) =>
+                          ![
+                            "category",
+                            "content",
+                            "description",
+                            "imageUrl",
+                            "imagesUrl",
+                            "is_enabled",
+                            "origin_price",
+                            "price",
+                            "title",
+                            "unit",
+                            "id",
+                            "num"
+                          ].includes(field)
+                      )
+                      .map((field) => (
+                        <p className="card-text">
+                          <span className="text-secondary">{field}：</span>
+                          {viewEditProduct[field] ?? filedNotFound}
+                        </p>
+                      ))}
                   </div>
                   <div className="card-body px-0">
                     <h6>
