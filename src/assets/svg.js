@@ -7,5 +7,6 @@ import trashCanSvg from "./trash-can.svg";
 import pasteSvg from "./paste.svg";
 import plusSvg from "./plus.svg";
 import reloadSvg from "./reload.svg";
+import viewAllSvg from "./view-all.svg";
 
-export { maximizeSvg, minimizeSvg, oneColSvg, threeColSvg, saveSvg, trashCanSvg, pasteSvg, plusSvg, reloadSvg };
+export { maximizeSvg, minimizeSvg, oneColSvg, threeColSvg, saveSvg, trashCanSvg, pasteSvg, plusSvg, reloadSvg, viewAllSvg };

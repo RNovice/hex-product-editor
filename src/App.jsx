@@ -15,6 +15,7 @@ import {
   pasteSvg,
   plusSvg,
   reloadSvg,
+  viewAllSvg,
 } from "./assets/svg";
 
 const { VITE_API_BASE: API_BASE, VITE_SECRET_KEY: SECRET_KEY } = import.meta
@@ -59,6 +60,7 @@ const App = () => {
   const [existProducts, setExistProducts] = useState([]);
   const [newProducts, setNewProducts] = useState([emptyProductData()]);
   const [selected, setSelected] = useState(null);
+  const [recoverDate, setRecoverDate] = useState(emptyProductData());
   const [viewEditProduct, setViewEditProduct] = useState({});
   const [json, setJson] = useState(null);
   const [editMode, setEditMode] = useState(true);
@@ -91,6 +93,9 @@ const App = () => {
       } catch (err) {
         console.error(err);
         logOperation({ msg: "請重新登入", type: "log-warning" });
+        document.cookie =
+          "productEditorAuthToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+        setIsLogin(false);
       } finally {
         setIsCheckingLogin(false);
       }
@@ -181,7 +186,7 @@ const App = () => {
       const { status } = await axios.post(`${API_BASE}/logout`);
       if (status === 200) {
         document.cookie =
-          "productEditorAuthToken; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+          "productEditorAuthToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
         setIsLogin(false);
         setExpireTime(null);
         logOperation({ msg: "登出成功" });
@@ -219,9 +224,12 @@ const App = () => {
   }
 
   function handleEditorChange(newValue) {
+    const parsedJson = JSON.parse(newValue);
     if (editMode) {
+      if (Array.isArray(parsedJson)) return;
+      setViewEditProduct(parsedJson);
     } else {
-      setNewProducts(JSON.parse(newValue));
+      setNewProducts(parsedJson);
     }
     setJson(newValue);
   }
@@ -254,16 +262,20 @@ const App = () => {
         logOperation({ msg: `${product.title} 新增成功`, type: "log-success" });
         refresh = true;
       } catch (err) {
+        console.error(err);
         const axiosError = err.response?.data.message;
         const msg = `${product.title || "未命名產品"} 新增失敗 | ${
-          axiosError?.join(", ") || err
+          (Array.isArray(axiosError) && axiosError?.join(", ")) || err
         }`;
         logOperation({ msg, type: "log-err" });
         failArr.push(product);
       }
     }
     setViewEditProduct({});
-    if (refresh) getProducts();
+    if (refresh) {
+      getProducts();
+      setNewProducts([emptyProductData()]);
+    }
     if (failArr.length) {
       setFormattedJson(failArr);
     } else {
@@ -296,6 +308,55 @@ const App = () => {
         type: "log-warning",
       });
     }
+  }
+
+  async function handleUpdateProduct(data) {
+    try {
+      await axios.put(`${API_BASE}/api/${API_Path}/admin/product/${data.id}`, {
+        data,
+      });
+      getProducts();
+      logOperation({
+        msg: "產品更新成功",
+        type: "log-success",
+      });
+      handleViewAll();
+    } catch (err) {
+      const axiosError = err.response?.data.message;
+      const msg = `產品更新失敗 | ${
+        (Array.isArray(axiosError) && axiosError?.join(", ")) || err
+      }`;
+      logOperation({
+        msg,
+        type: "log-err",
+      });
+      console.error(err);
+    }
+  }
+
+  async function handleDeleteProduct(id) {
+    try {
+      if (!confirm("確定刪除此產品")) return;
+      await axios.delete(`${API_BASE}/api/${API_Path}/admin/product/${id}`);
+      getProducts();
+      logOperation({
+        msg: "成功刪除產品",
+        type: "log-success",
+      });
+      handleViewAll();
+    } catch (err) {
+      console.error(err);
+      logOperation({
+        msg: "產品刪除失敗",
+        type: "log-err",
+      });
+    }
+  }
+
+  function handleViewAll() {
+    setFormattedJson(existProducts);
+    setViewEditProduct({});
+    setSelected(null);
   }
 
   async function getProducts() {
@@ -365,6 +426,11 @@ const App = () => {
                   }`}
                   onClick={() => {
                     setViewEditProduct(product);
+                    if (editMode) {
+                      setFormattedJson(product);
+                      setRecoverDate(product);
+                      moveToLineOrBottom(1);
+                    }
                     setSelected(`aside-product-li-${i}`);
                   }}
                 >
@@ -484,6 +550,7 @@ const App = () => {
                 onChange={handleEditorChange}
                 onMount={handleEditorDidMount}
                 options={{
+                  readOnly: Object.keys(viewEditProduct).length === 0,
                   folding: true,
                   foldingHighlight: true,
                   wordWrap: "on",
@@ -532,14 +599,37 @@ const App = () => {
                         </ruby>
                       )}
                     </div>
-                    <div className="text-center">
-                      <button title="保存變更此產品">
+                    <div
+                      className={`text-center ${
+                        viewEditProduct.title === undefined
+                          ? "edit-penal-mask"
+                          : ""
+                      }`}
+                    >
+                      <button title="查看全部產品" onClick={handleViewAll}>
+                        <i
+                          style={{ maskImage: `url("${viewAllSvg}")` }}
+                          className="icon bg-light"
+                        />
+                      </button>
+                      <button
+                        title="保存變更此產品"
+                        onClick={() => {
+                          handleUpdateProduct(viewEditProduct);
+                        }}
+                      >
                         <i
                           style={{ maskImage: `url("${saveSvg}")` }}
                           className="icon bg-success"
                         />
                       </button>
-                      <button title="重製回原本資料">
+                      <button
+                        title="重製回原本資料"
+                        onClick={() => {
+                          setViewEditProduct(recoverDate);
+                          setFormattedJson(recoverDate);
+                        }}
+                      >
                         <i
                           style={{ maskImage: `url("${reloadSvg}")` }}
                           className="icon bg-warning"
@@ -549,7 +639,9 @@ const App = () => {
                         <i
                           style={{ maskImage: `url("${trashCanSvg}")` }}
                           className="icon bg-danger"
-                          onClick={() => {}}
+                          onClick={() =>
+                            handleDeleteProduct(viewEditProduct.id)
+                          }
                         />
                       </button>
                     </div>
@@ -702,30 +794,33 @@ const App = () => {
                       <br />
                       {viewEditProduct.content ?? filedNotFound}
                     </p>
-                    {Object.keys(viewEditProduct)
-                      .filter(
-                        (field) =>
-                          ![
-                            "category",
-                            "content",
-                            "description",
-                            "imageUrl",
-                            "imagesUrl",
-                            "is_enabled",
-                            "origin_price",
-                            "price",
-                            "title",
-                            "unit",
-                            "id",
-                            "num"
-                          ].includes(field)
-                      )
-                      .map((field) => (
-                        <p className="card-text">
-                          <span className="text-secondary">{field}：</span>
-                          {viewEditProduct[field] ?? filedNotFound}
-                        </p>
-                      ))}
+                    {isObject(viewEditProduct) &&
+                      Object.keys(viewEditProduct)
+                        .filter(
+                          (field) =>
+                            ![
+                              "category",
+                              "content",
+                              "description",
+                              "imageUrl",
+                              "imagesUrl",
+                              "is_enabled",
+                              "origin_price",
+                              "price",
+                              "title",
+                              "unit",
+                              "id",
+                              "num",
+                            ].includes(field)
+                        )
+                        .map((field, i) => (
+                          <p className="card-text" key={`custom-field-${i}`}>
+                            <span className="text-secondary">{field}：</span>
+                            {!isObject(viewEditProduct[field])
+                              ? viewEditProduct[field] ?? filedNotFound
+                              : JSON.stringify(viewEditProduct[field])}
+                          </p>
+                        ))}
                   </div>
                   <div className="card-body px-0">
                     <h6>
