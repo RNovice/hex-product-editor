@@ -244,6 +244,7 @@ const App = () => {
   }
 
   async function handleAddNewProduct() {
+    if (isNotReady()) return;
     let refresh = false;
     const failArr = [];
     if (!checkSyntaxRight()) return;
@@ -262,12 +263,7 @@ const App = () => {
         logOperation({ msg: `${product.title} 新增成功`, type: "log-success" });
         refresh = true;
       } catch (err) {
-        console.error(err);
-        const axiosError = err.response?.data.message;
-        const msg = `${product.title || "未命名產品"} 新增失敗 | ${
-          (Array.isArray(axiosError) && axiosError?.join(", ")) || err
-        }`;
-        logOperation({ msg, type: "log-err" });
+        errorMsg(err, `${product.title || "未命名產品"} 新增失敗`)
         failArr.push(product);
       }
     }
@@ -311,6 +307,7 @@ const App = () => {
   }
 
   async function handleUpdateProduct(data) {
+    if (isNotReady()) return;
     try {
       await axios.put(`${API_BASE}/api/${API_Path}/admin/product/${data.id}`, {
         data,
@@ -322,19 +319,12 @@ const App = () => {
       });
       handleViewAll();
     } catch (err) {
-      const axiosError = err.response?.data.message;
-      const msg = `產品更新失敗 | ${
-        (Array.isArray(axiosError) && axiosError?.join(", ")) || err
-      }`;
-      logOperation({
-        msg,
-        type: "log-err",
-      });
-      console.error(err);
+      errorMsg(err, "產品更新失敗")
     }
   }
 
   async function handleDeleteProduct(id) {
+    if (isNotReady()) return;
     try {
       if (!confirm("確定刪除此產品")) return;
       await axios.delete(`${API_BASE}/api/${API_Path}/admin/product/${id}`);
@@ -345,11 +335,7 @@ const App = () => {
       });
       handleViewAll();
     } catch (err) {
-      console.error(err);
-      logOperation({
-        msg: "產品刪除失敗",
-        type: "log-err",
-      });
+      errorMsg(err, "產品刪除失敗")
     }
   }
 
@@ -369,8 +355,7 @@ const App = () => {
       if (editMode) setFormattedJson(allProducts);
       logOperation({ msg: `成功撈取資料: ${allProducts.length}筆產品` });
     } catch (err) {
-      console.error(err);
-      logOperation({ msg: `撈取資料失敗`, type: "log-err" });
+      errorMsg(err, "撈取資料失敗")
     }
   }
 
@@ -407,6 +392,38 @@ const App = () => {
       return false;
     }
     return true;
+  }
+
+  function isNotReady() {
+    if (!isLogin) {
+      logOperation({
+        msg: "請先登入",
+        type: "log-warning",
+      });
+      return true;
+    } 
+    if (API_Path === "") {
+      logOperation({
+        msg: "請填寫API路徑",
+        type: "log-warning",
+      });
+      return true;
+    }
+    return false;
+  }
+
+  function errorMsg(err, prefix = null) {
+    const axiosError = err.response?.data.message;
+    let content = err;
+    if (axiosError) {
+      content = Array.isArray(axiosError) ? axiosError?.join(", ") : axiosError;
+    }
+    const msg = `${prefix ? `${prefix} | ` : ""}${content}`;
+    logOperation({
+      msg,
+      type: "log-err",
+    });
+    console.error(err);
   }
 
   return (
@@ -550,7 +567,7 @@ const App = () => {
                 onChange={handleEditorChange}
                 onMount={handleEditorDidMount}
                 options={{
-                  readOnly: Object.keys(viewEditProduct).length === 0,
+                  readOnly: Object.keys(viewEditProduct).length === 0 && editMode,
                   folding: true,
                   foldingHighlight: true,
                   wordWrap: "on",
