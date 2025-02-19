@@ -263,7 +263,7 @@ const App = () => {
         logOperation({ msg: `${product.title} 新增成功`, type: "log-success" });
         refresh = true;
       } catch (err) {
-        errorMsg(err, `${product.title || "未命名產品"} 新增失敗`)
+        errorMsg(err, `${product.title || "未命名產品"} 新增失敗`);
         failArr.push(product);
       }
     }
@@ -319,7 +319,7 @@ const App = () => {
       });
       handleViewAll();
     } catch (err) {
-      errorMsg(err, "產品更新失敗")
+      errorMsg(err, "產品更新失敗");
     }
   }
 
@@ -335,7 +335,7 @@ const App = () => {
       });
       handleViewAll();
     } catch (err) {
-      errorMsg(err, "產品刪除失敗")
+      errorMsg(err, "產品刪除失敗");
     }
   }
 
@@ -355,7 +355,7 @@ const App = () => {
       if (editMode) setFormattedJson(allProducts);
       logOperation({ msg: `成功撈取資料: ${allProducts.length}筆產品` });
     } catch (err) {
-      errorMsg(err, "撈取資料失敗")
+      errorMsg(err, "撈取資料失敗");
     }
   }
 
@@ -401,7 +401,7 @@ const App = () => {
         type: "log-warning",
       });
       return true;
-    } 
+    }
     if (API_Path === "") {
       logOperation({
         msg: "請填寫API路徑",
@@ -454,6 +454,25 @@ const App = () => {
                   {product?.title || "找不到產品名稱"}
                 </li>
               ))}
+              {isLogin && API_Path !== "" && editMode && (
+                <li className="p-2 d-flex">
+                  <div
+                    className="mx-auto text-center text-info"
+                    role="button"
+                    onClick={getProducts}
+                  >
+                    <i
+                      style={{
+                        maskImage: `url("${reloadSvg}")`,
+                        height: 24,
+                        width: 24,
+                      }}
+                      className="icon bg-info my-2 mx-auto"
+                    />
+                    刷新資料
+                  </div>
+                </li>
+              )}
             </ul>
           </div>
           <div className="py-3 user-info">
@@ -567,7 +586,8 @@ const App = () => {
                 onChange={handleEditorChange}
                 onMount={handleEditorDidMount}
                 options={{
-                  readOnly: Object.keys(viewEditProduct).length === 0 && editMode,
+                  readOnly:
+                    Object.keys(viewEditProduct).length === 0 && editMode,
                   folding: true,
                   foldingHighlight: true,
                   wordWrap: "on",
@@ -590,6 +610,7 @@ const App = () => {
                     className="control-mode-switch btn btn-success"
                     onClick={() =>
                       setEditMode((pre) => {
+                        if (isNotReady()) return pre;
                         logOperation({ msg: !pre ? "編輯模式" : "新增模式" });
                         return !pre;
                       })
