@@ -493,7 +493,7 @@ const App = () => {
                   className="form-control bg-dark text-light"
                   placeholder="name@example.com"
                   value={userAcct.username}
-                  required
+                  required={!isLogin}
                   onInput={handleLoginInput}
                 />
                 <label htmlFor="username" className="text-light">
@@ -508,7 +508,7 @@ const App = () => {
                     ? "success btn-lg"
                     : "secondary btn-lg"
                 } w-100`}
-                type="submit"
+                type={"submit"}
                 tabIndex={-1}
               >
                 {isCheckingLogin ? (
@@ -531,7 +531,7 @@ const App = () => {
                   className="form-control bg-dark text-light"
                   placeholder="Password"
                   value={userAcct.password}
-                  required
+                  required={!isLogin}
                   onInput={handleLoginInput}
                 />
                 <label htmlFor="password" className="text-light">
